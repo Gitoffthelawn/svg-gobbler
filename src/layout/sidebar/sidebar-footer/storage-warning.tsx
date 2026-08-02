@@ -20,10 +20,17 @@ export const StorageWarning = () => {
   const [usage, setUsage] = useState<StorageUsage>()
 
   useEffect(() => {
-    StorageUtilities.getStorageUsage().then(setUsage)
+    const refresh = () => StorageUtilities.getStorageUsage().then(setUsage)
+    refresh()
+
+    const listener = (_changes: object, areaName: string) => {
+      if (areaName === 'local') refresh()
+    }
+    chrome.storage.onChanged.addListener(listener)
+    return () => chrome.storage.onChanged.removeListener(listener)
   }, [])
 
-  if (!usage || usage.percent < WARN_THRESHOLD) return
+  if (!usage || !Number.isFinite(usage.percent) || usage.percent < WARN_THRESHOLD) return
 
   const isDanger = usage.percent >= DANGER_THRESHOLD
   const percentDisplay = Math.min(Math.round(usage.percent * 100), 100)
